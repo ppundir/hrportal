@@ -45,9 +45,9 @@ class CompanyAdmin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(120), unique=True, nullable=False)
-    apitoken = db.Column(db.String(120), unique=True, nullable=True)
-    company_id = db.Column(db.Integer,unique=True, nullable=False)
+    password = db.Column(db.String(120), unique=False, nullable=False)
+    apitoken = db.Column(db.String(120), unique=False, nullable=True)
+    company_id = db.Column(db.Integer,unique=False, nullable=False)
 
 def fetch_from_cache(url):	
 	mydict =  client.get(url)
@@ -68,30 +68,59 @@ def fetch_from_cache(url):
 @app.route("/admin/logout")
 def admin_logout():
     session['logged_in'] = False
-    return  render_template('adminlogin2.html',message="logout")
+    return  redirect(url_for('login'))	
 
-
-@app.route('/admin/register',methods = ['POST'])
+@app.route('/',methods = ['GET','POST'])
+@app.route('/admin/register',methods = ['GET','POST'])
 def register():
-	try:		
-		val =  json.loads(request.data)		
-		hashed = hashpw(str(val["password"]), gensalt())		
-		u =  CompanyAdmin(username=val["username"],password=hashed,apitoken=val["apitoken"],company_id=val["company_id"],email=val["email"])
-		db.session.add(u)		
-		db.session.commit()		
-		ret = {"status":"success"}
-		return json.dumps(ret)
-	except Exception,e:		
-		ret = {"status":"failure"}
-		return json.dumps(ret)
+	try:
+		if session['logged_in']:
+			return  redirect(url_for('employee',nexturl="x"))
+	except Exception,e:
+		print e
+
+	if request.method == 'POST':
+		try:				
+			username = request.form['username']
+			email = request.form['email']	
+			companyid = request.form['companyid']	
+			apitoken = request.form['apitoken']
+			password = request.form['password']				
+			#validation unique
+			obj1 = CompanyAdmin.query.filter_by(username=username).first()			
+			if obj1:
+				return render_template("register.html",message = "Username Exists. Choose different username")
+			obj2 = CompanyAdmin.query.filter_by(email=email).first()
+			if obj2:
+				return render_template("register.html",message = "Email Exists. Choose different email")
+			
+			##################
+			hashed = hashpw(str(password), gensalt())		
+			u =  CompanyAdmin(username=username,password=hashed,apitoken=apitoken,company_id=companyid,email=email)
+			db.session.add(u)		
+			db.session.commit()	
+			return  redirect(url_for('login'))	
+			
+		except Exception,e:	
+			print e	
+			ret = {"status":"failure"}
+			return json.dumps(ret)
+	return render_template("register.html")
 
 @app.route('/admin/login',methods = ['GET','POST'])
 def login():
+	try:
+		if session['logged_in']:
+			return  redirect(url_for('employee',nexturl="x"))
+	except Exception,e:
+		print e
 	if request.method == 'POST':
 		try:				
 			password = request.form['password']
 			username = request.form['username']			
-			cobj = CompanyAdmin.query.filter_by(username=username).first()			
+			cobj = CompanyAdmin.query.filter_by(username=username).first()		
+			if not cobj:
+				return render_template("adminlogin2.html",message="Username does not exist")	
 			if hashpw(str(password), str(cobj.password)) == cobj.password:				
 				session['logged_in'] = True
 				session['username'] = username				
