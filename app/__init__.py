@@ -11,6 +11,8 @@ from app import views
 #bcrypt for storing passwords.
 from bcrypt import hashpw, gensalt
 import yaml
+#for logging
+import raven
 
 #for memcache
 import memcache
@@ -34,11 +36,14 @@ mysql_username = yaml_config['mysql_username']
 mysql_password = yaml_config['mysql_password']
 mysql_host  =yaml_config['mysql_host']
 mysql_db = yaml_config['mysql_db']
+sentry_url = yaml_config['sentry_url']
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://' + mysql_username + ':' + mysql_password + '@' + mysql_host + '/' + mysql_db
 db = SQLAlchemy(app)
 lm = LoginManager(app)
 lm.login_view = '/admin/login'
+
+sentry = raven.Client(sentry_url)
 
 
 class CompanyAdmin(db.Model):
@@ -67,21 +72,27 @@ def fetch_from_cache(url):
  
 @app.route("/admin/logout")
 def admin_logout():
-    session['logged_in'] = False
-    return  redirect(url_for('login'))	
+	#app.logger.info("logout requested for user")
+	#sentry.captureMessage("logout requested for user")
+	session['logged_in'] = False
+	return  redirect(url_for('login'))	
 
 @app.route('/',methods = ['GET','POST'])
 @app.route('/admin/register',methods = ['GET','POST'])
 def register():
+	#app.logger.info("register request")
+	#sentry.captureMessage("register request")
 	try:
 		if session['logged_in']:
 			return  redirect(url_for('employee',nexturl="x"))
 	except Exception,e:
-		print e
-		return render_template("error.html")
+		print e		
 
 	if request.method == 'POST':
-		try:				
+		try:	
+			#app.logger.info("data from form submit %s",str(request.form))	
+			#sentry.captureMessage("data from form submit ")
+			#sentry.captureMessage(str(request.form))		
 			username = request.form['username']
 			email = request.form['email']	
 			companyid = request.form['companyid']	
@@ -90,9 +101,17 @@ def register():
 			#validation unique
 			obj1 = CompanyAdmin.query.filter_by(username=username).first()			
 			if obj1:
+				#app.logger.info("Username Exists. Choose different username")
+				mystr = "Username " + username + " Exists. Choose different username"
+				sentry.captureMessage(mystr)
+				
 				return render_template("register.html",message = "Username Exists. Choose different username")
 			obj2 = CompanyAdmin.query.filter_by(email=email).first()
 			if obj2:
+				#app.logger.info("Email Exists. Choose different email")
+				mystr = "Email " + email + " Exists. Choose different email"
+				sentry.captureMessage(mystr)
+				#sentry.captureMessage(email)
 				return render_template("register.html",message = "Email Exists. Choose different email")
 			
 			##################
@@ -100,37 +119,57 @@ def register():
 			u =  CompanyAdmin(username=username,password=hashed,apitoken=apitoken,company_id=companyid,email=email)
 			db.session.add(u)		
 			db.session.commit()	
+			#app.logger.info("data committed to db")
+			#sentry.captureMessage("data committed to db")
 			return  redirect(url_for('login'))	
 			
 		except Exception,e:	
-			print e	
+			#app.logger.info(str(e))
+			mystr = str(e) + "\n" + str(request.form)
+			sentry.captureMessage(mystr)
+			#sentry.captureMessage()
 			return render_template("error.html")
 	return render_template("register.html")
 
 @app.route('/admin/login',methods = ['GET','POST'])
 def login():
+	#app.logger.info("login request")
+	#sentry.captureMessage("login request")
 	try:
 		if session['logged_in']:
 			return  redirect(url_for('employee',nexturl="x"))
 	except Exception,e:
 		print e
-		return render_template("error.html")
+		
 	if request.method == 'POST':
-		try:				
+		try:	
+			#app.logger.info("input data = %s",str(request.form)	)	
+			#sentry.captureMessage("input data")
+			#sentry.captureMessage(str(request.form))
 			password = request.form['password']
 			username = request.form['username']			
 			cobj = CompanyAdmin.query.filter_by(username=username).first()		
 			if not cobj:
+				#app.logger.info("Username does not exist")
+				mystr = "Username does not exist" + "\n" + str(request.form)
+				sentry.captureMessage(mystr)
+				#sentry.captureMessage("Username does not exist")
 				return render_template("adminlogin2.html",message="Username does not exist")	
 			if hashpw(str(password), str(cobj.password)) == cobj.password:				
 				session['logged_in'] = True
 				session['username'] = username				
-				ret_users = []
+				ret_users = []				
+				#sentry.captureMessage("user logged in")
+				#app.logger.info("user logged in")
 				return  redirect(url_for('employee',nexturl="x"))
 			else:		
+				sentry.captureMessage("Wrong Credentials. Please try again")
+				#app.logger.info("Wrong Credentials. Please try again")
 				return render_template("adminlogin2.html",message="Wrong Credentials. Please try again")
 		except Exception,e:
-			print e		
+			mystr = str(e) + "\n" + str(request.form)
+			sentry.captureMessage(mystr)			
+			#app.logger.info(str(e))	
 			return render_template("error.html")
 	return render_template("adminlogin2.html")
 
@@ -169,6 +208,10 @@ def get_manager(url):
 @app.route('/employee',methods = ['GET'])
 def employee():
 	try:			
+		#app.logger.info("get employee data")
+		#sentry.captureMessage("get employee data")
+		#app.logger.info(session['username'])
+		#sentry.captureMessage(session['username'])
 		cobj = CompanyAdmin.query.filter_by(username=session['username']).first()
 		cid = cobj.company_id
 		token = "Bearer " + cobj.apitoken		
@@ -178,7 +221,8 @@ def employee():
 		else:		
 			next_url_rcvd = utils.decode(cobj.apitoken,str(request.args['nexturl']))				
 			url = next_url_rcvd
-		
+		#app.logger.info(url)
+		#sentry.captureMessage(url)
 		headers = {'authorization': token}
 		response = requests.request("GET", url, headers=headers)
 		ret = response.text		
@@ -200,14 +244,22 @@ def employee():
 			users.append(user)
 		
 		if empdict["data"]["next_url"] == None:
+			#sentry.captureMessage("next url none. end of pagination")
+			#app.logger.info("next url none. end of pagination")
 			return render_template("listing.html",users=users)
 		else:
+			#sentry.captureMessage("next url passed")
+			#app.logger.info("next url passed")
+			
 			next_url_fetched = empdict["data"]["next_url"]
+			#app.logger.info(next_url_fetched)
+			#sentry.captureMessage(next_url_fetched)
 			nexturlencoded = utils.encode(cobj.apitoken,next_url_fetched)
 		
 			return render_template("listing.html",users=users,nexturl=nexturlencoded)
 	except Exception,e:
-		print e
+		#app.logger.info(str(e))
+		sentry.captureMessage(str(e))
 		return render_template("error.html")
 
 db.create_all()
