@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>HR Portal</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">	
+		<link rel="stylesheet" type="text/css" href="/static/pageCss/bootstrap.css">
+		<link rel="stylesheet" type="text/css" href="/static/datatables/css/jquery.dataTables.min.css">
+		<script src="/static/datatables/js/jquery.js"></script>
+		<script src="/static/datatables/js/jquery.dataTables.js"></script>
+		<script src="/static/datatables/js/dataTables.bootstrap.js"></script>
+		<script>
+		   $(document).ready(function() {
+			    $('#example').DataTable();
+			} );
+		</script>		
+	</head>
+	<body>			
+		<div class="container" style="text-align:-webkit-center">			
+			<div class="list">
+				<table id="example" class="display" cellspacing="0" width="100%">
+		    		<thead>
+		        		<tr>		            		
+		            		<th>Fullname</th>
+		            		<th>Title</th>
+		            		<th>Department</th>		            		
+		            		<th>Location</th>
+		            		<th>Manager</th>		            		
+		            		<th>Email</th>
+		        		</tr>
+		    		</thead>
+		    		<tbody>		    			
+		    			{% for user in users%}		    			
+					        <tr>					            
+					            <td name="fullname" >{{user.fullname}}</td>
+					            <td name="title">{{user.title}}</td>
+					            <td name="department">{{user.department}}</td>					            
+					            <td name= "location">{{user.location}}</td>
+					            <td name= "manager">{{user.manager}}</td>					            
+					            <td name= "email">{{user.email}}</td>
+					        </tr>					   
+				        {% endfor %}					    		    
+				    </tbody>
+				</table>
+			</div>
+		</div>		
+		{% if nexturl %}		
+		<div id="pagination" style="text-align:center">
+		    <a href="/employee?nexturl={{nexturl}}" class="next">next</a>
+		</div>
+		{% endif %}				
+	</body>
+</html>
+
+

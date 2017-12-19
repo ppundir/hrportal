@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>HR Portal</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<!-- pure css -->
+		<link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css">
+		<link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/grids-responsive-min.css">
+		<!-- pure css end -->
+		<link href="https://fonts.googleapis.com/css?family=Lato:100,300" rel="stylesheet">	
+		
+		
+	</head>
+	<body>
+		<div class="container" style="text-align:center">
+			<div class="text">
+				
+				<p style="font-weight: 100">HR Portal</p>
+				<form class="pure-form pure-form-aligned" action="/admin/login" method="POST">
+    				<fieldset>
+        				<div class="pure-control-group">
+            				<input id="username" type="text" name="username" placeholder="Username" required>
+        				</div>
+						<div class="pure-control-group">
+        					<input id="password" type="password" name="password" placeholder="Password" required>
+        				</div>
+        				<div class="pure-controls-group">
+        				 	<button type="submit" class="pure-button">Submit</button>
+        				</div>
+    				</fieldset>
+				</form>
+				{% if message %}                
+                    <p style="color:red;font-size:18px">{{message}}</p>
+                {% endif %}
+                 
+			</div>
+		</div>
+	</body>
+</html>
