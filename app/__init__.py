@@ -12,12 +12,15 @@ from app import views
 from bcrypt import hashpw, gensalt
 import yaml
 
+#for memcache
+import memcache
+client = memcache.Client([('127.0.0.1', 11211)])
 
 import os
 
 
 filepath = os.getcwd() + '/config/application.yml'
-
+print filepath
 with open(filepath, 'r') as stream:
     try:
         yaml_config = yaml.load(stream)
@@ -46,6 +49,21 @@ class CompanyAdmin(db.Model):
     apitoken = db.Column(db.String(120), unique=True, nullable=True)
     company_id = db.Column(db.Integer,unique=True, nullable=False)
 
+def fetch_from_cache(url):	
+	mydict =  client.get(url)
+	if not mydict:
+		#get fresh
+		cobj = CompanyAdmin.query.filter_by(username=session['username']).first()			
+		token = "Bearer " + cobj.apitoken			
+		headers = {'authorization': token}
+		response = requests.request("GET", url, headers=headers)
+		ret = response.text		
+		mydict = json.loads(ret)
+		#save to cache
+		client.set(url,mydict)
+		return mydict
+	else:
+		return mydict
  
 @app.route("/admin/logout")
 def admin_logout():
@@ -90,7 +108,7 @@ def login():
 def get_department(url):	
 	if url != None:
 		try:
-			mydict = utils.fetch_from_cache(url)
+			mydict = fetch_from_cache(url)
 			return mydict["data"]["name"]
 		except Exception,e:
 			print e
@@ -100,7 +118,7 @@ def get_department(url):
 def get_location(url):
 	if url != None:
 		try:
-			mydict = utils.fetch_from_cache(url)
+			mydict = fetch_from_cache(url)
 			return mydict["data"]["name"]
 		except Exception,e:
 			print e
@@ -110,7 +128,7 @@ def get_location(url):
 def get_manager(url):
 	if url != None:
 		try:
-			mydict = utils.fetch_from_cache(url)
+			mydict = fetch_from_cache(url)
 			return (mydict["data"]["first_name"] + mydict["data"]["last_name"])
 		except Exception,e:
 			print e
