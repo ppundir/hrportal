@@ -16,7 +16,7 @@ import raven
 
 #for memcache
 import memcache
-client = memcache.Client([('127.0.0.1', 11211)])
+
 
 import os
 
@@ -37,6 +37,8 @@ mysql_password = yaml_config['mysql_password']
 mysql_host  =yaml_config['mysql_host']
 mysql_db = yaml_config['mysql_db']
 sentry_url = yaml_config['sentry_url']
+memcache_host = yaml_config['memcache_host']
+memcache_port = yaml_config['memcache_port']
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://' + mysql_username + ':' + mysql_password + '@' + mysql_host + '/' + mysql_db
 db = SQLAlchemy(app)
@@ -44,6 +46,7 @@ lm = LoginManager(app)
 lm.login_view = '/admin/login'
 
 sentry = raven.Client(sentry_url)
+client = memcache.Client([(memcache_host, memcache_port)])
 
 
 class CompanyAdmin(db.Model):
