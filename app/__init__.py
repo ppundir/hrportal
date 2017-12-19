@@ -78,6 +78,7 @@ def register():
 			return  redirect(url_for('employee',nexturl="x"))
 	except Exception,e:
 		print e
+		return render_template("error.html")
 
 	if request.method == 'POST':
 		try:				
@@ -103,8 +104,7 @@ def register():
 			
 		except Exception,e:	
 			print e	
-			ret = {"status":"failure"}
-			return json.dumps(ret)
+			return render_template("error.html")
 	return render_template("register.html")
 
 @app.route('/admin/login',methods = ['GET','POST'])
@@ -114,6 +114,7 @@ def login():
 			return  redirect(url_for('employee',nexturl="x"))
 	except Exception,e:
 		print e
+		return render_template("error.html")
 	if request.method == 'POST':
 		try:				
 			password = request.form['password']
@@ -130,8 +131,7 @@ def login():
 				return render_template("adminlogin2.html",message="Wrong Credentials. Please try again")
 		except Exception,e:
 			print e		
-			ret = {"status":"failure"}
-			return json.dumps(ret)
+			return render_template("error.html")
 	return render_template("adminlogin2.html")
 
 def get_department(url):	
@@ -208,7 +208,6 @@ def employee():
 			return render_template("listing.html",users=users,nexturl=nexturlencoded)
 	except Exception,e:
 		print e
-		ret = {"status":"failure"}
-		return json.dumps(ret)
+		return render_template("error.html")
 
 db.create_all()
